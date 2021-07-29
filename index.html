@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab&family=Shippori+Mincho+B1:wght@500&display=swap" rel="stylesheet">
+  <title>210729-test</title>
+
+  <!--CSS始まり-->
+  <style>
+    /*CSSのコメントアウト*/
+    body {
+
+      background-color: #ffffff;
+      /* font-family: "Roboto Slab", serif; */
+      font-family: 'Shippori Mincho B1', serif;
+    }
+
+    #textArea {
+      position: absolute;
+      z-index: 1000;
+
+      height: 349px;
+      left: 20%;
+      /* right: 25%; */
+      top: calc(45% - 349px/2 + 0.5px);
+      margin: auto;
+
+      background: #F9F9F9;
+      border: 1px solid #E5E5E5;
+      box-sizing: border-box;
+      border-radius: 12px;
+
+      font-weight: 500;
+      font-size: 24px;
+
+    }
+
+    #save{
+
+position: absolute;
+z-index: 1000;
+
+left: 20%;
+right: 71.24%;
+/* left: calc(50% - 843px/2 - 0.5px); */
+top: calc(50% - 349px/2 + 349px + 20px);
+
+background: #F9F9F9;
+border: 1px solid #E5E5E5;
+box-sizing: border-box;
+border-radius: 8px;
+
+/* 保存 */
+font-style: normal;
+font-weight: 500;
+font-size: 14px;
+line-height: 17px;
+text-decoration: none;
+text-align: center;
+padding: 13px 0;
+color: #000000;
+
+/    }
+
+canvas{opacity:0; z-index: 0;}
+
+  </style>
+  <!--CSS終わり-->
+
+</head>
+
+<body>
+  <textarea name="textArea" id="textArea" cols="70" rows="5"></textarea>
+  <a id="save" href="#">保存</a>
+
+  <!-- 読み込みたいtextarea -->
+<!-- <textarea id="textarea">sample!!</textarea> -->
+
+<!-- クッリクした際に、テキストエリア内の文字列をダウンロードさせたい -->
+<!-- <a href='javascript:download()' id="edit-btn">ダウンロード</a> -->
+
+
+  <!-- <div class="historyView" id="histryView"></div> -->
+
+  <script type="text/javascript">
+    var textOriginal;
+    var textArray = [];
+    var textSave = [];
+    var textOld = []; //ひとつ前の文字列
+    var textNew = []; //今の文字列
+    var textS = []; //スライドする文字列
+    var textD = []; //消された文字列
+    var texttest = []; //今の文字列
+    var mojiSize = 15;
+
+    let keyCounter;
+    let timeA = [];
+    var timeB = []; //消された文字が入力されたときの時間配列
+    var timeC = []; //BACKSPACEが押されたときの時間配列
+    var timeS = []; //途中に削除、入力されたとき、それよりあとの文字が入力された時の時間配列
+    var timeTL = []; //現在の文字数の分の時間配列
+    let timeNow = [];
+
+    let xpD = []; //BACKSPACEが押されたときの位置配列
+    let xpS = []; //途中に削除、入力されたとき、それよりあとの文字の位置配列
+
+    let xp = []; //最大のx
+
+    // let back = false; //BACKSPACEが押されたかどうか
+
+    let sabun; //新しく入力された文字数
+    let cp //新しく入力されたときのカーソルの位置
+    let insertpos; //新しく入力された位置
+
+    var textArea = document.getElementById("textArea");
+    // var textAreaB = document.getElementById("textAreaB");
+
+
+    function setup() {
+      //background(0);
+      //fill(0);
+      noStroke();
+      textFont('Shippori Mincho B1');
+      // textSize(15);
+    }
+
+
+    var inputEventHandler = {
+      compFlg: false, // IME入力中フラグ
+
+      initialize: function() {
+        let targetElm = document.getElementById("textArea");
+
+
+        targetElm.addEventListener('keydown', function() {
+          // ブラウザによりcompositionendイベントとの発火タイミングが前後するのでsetTimeoutで少し遅らせます
+          setTimeout(function() {
+            if (self.compFlg) {
+              return;
+            }
+          }, 10)
+        });
+
+        targetElm.addEventListener('compositionstart', function() {
+          self.compFlg = true;
+          // 　　　　　console.log("windowWi");
+        });
+
+        targetElm.addEventListener('compositionend', function() {
+          self.compFlg = false;
+          matome(false);
+
+        });
+      }
+    }
+    inputEventHandler.initialize();
+
+
+
+
+    function matome(back) {
+      if (back === true) {
+        textAreaInput();
+        keyCount();
+        timeArray();
+        timeArrayB();
+        // console.log("aaa");
+      } else {
+        textAreaInput();
+        keyCount();
+        timeArray();
+      }
+
+
+      Display();
+      textOld = textArea.value;
+      // console.log(textArea.value,textOld2);
+      // console.log('変換確定後');
+    }
+
+    function textAreaInput() { //テキストエリアの値を取得
+      //console.log("リスナースタート");
+      textOriginal = textArea.value;
+      textNew = textArea.value;
+      cp = textArea.selectionStart;
+      // console.log("textOriginal", textOriginal);　//配列に分割されていないオリジナル
+      //textArray = textArea.value;
+      textArray = append(textArray, "/");
+      //console.log(cc);//配列に分割して扱える
+      //console.log(textOld,textNew,texttest);
+    }
+
+
+    function canvasSize() {
+      x = xp; //入力された全ての文字数
+      var y = keyCounter;
+      //console.log(x, y, keyCounter * 0.03);
+      createCanvas(xp * mojiSize * 1.3, y * 0.03 + 5);
+      //console.log (xpD[xpD.length],timeTL[timeTL.length]);
+      //console.log(xp);
+    }
+
+
+    function keyCount() { //確定された時の時間を取得
+      keyCounter = floor(millis() * 0.2);
+      timeA = append(timeA, keyCounter);
+    }
+
+    function timeArray() { //追加された文字数分の時間を配列に入れる
+      sabun = textNew.length - textOld.length; //追加された文字数
+      // console.log(textNew,textOld,-sabun);
+      insertpos = cp - sabun; //追加された位置
+      for (var i = 0; i < sabun; i++) { //時間配列を追加された位置に追加された文字数分だけ追加
+        timeTL.splice(insertpos, 0, keyCounter);
+
+
+      }
+      while (xp < textNew.length) {
+        xp++;
+        // console.log(xp, cp);
+      }
+    }
+
+    if (sabun > 0) {
+      for (var i = 0; i < textNew.length - cp; i++) {
+        timeS = append(timeS, timeTL[cp + i]);
+        textS = append(textS, textNew[cp + i]);
+        xpS = append(xpS, cp - sabun + i);
+      }
+    }
+
+
+    function timeArrayB() { //Backspaceが押されたときに配列から時間を削除する
+      for (var i = 0; i < -sabun; i++) {
+        // console.log("append mae timeB: ",timeB);
+        timeB = append(timeB, timeTL[cp + i]); //
+        // console.log("append ato timeB: ",timeB);
+        // console.log("append mae timeC: ",timeC);
+        timeC = append(timeC, keyCounter);
+        // console.log("append ato timeC: ",timeC);
+        // console.log("append mae xpD: ",xpD);
+        xpD = append(xpD, cp + i);
+        // console.log("append ato xpD: ",xpD);
+        // console.log("text old: ",textOld);
+        // timeTL.splice(cp + i, 1);
+
+        // console.log("text old revenge: ",textOld);
+
+
+        //console.log(test(i));
+      }
+
+      for (var i = 0; i < -sabun; i++) {
+        test(i);
+      }
+
+      function test() { //Backspaceが押された時のカーソルより後ろの文字の情報を取得
+        for (var n = 0; n < textNew.length - cp; n++) {
+          timeS = append(timeS, timeTL[cp + n]);
+          textS = append(textS, textNew[cp + n]);
+          xpS = append(xpS, cp + n);
+        }
+        timeTL.splice(cp, 1);
+        textD = append(textD, textOld[cp + i]);
+
+      }
+      console.log(timeB, timeTL.length);
+    }
+
+
+    function Display() {
+      canvasSize();
+      textFont("Shippori Mincho B1");
+      background(255);
+      // background(200);
+      deleteDisplay();
+      deletetextDisplay();
+      textDisplay();
+      slidetextDisplay();
+    }
+
+
+    function textDisplay() { //テキストを表示
+      //fill(0);
+      // textFont("Shippori Mincho B1");
+      fill(0);
+      for (var i = 0; i < textNew.length; i++) {
+        text(textNew[i], 0 + mojiSize * 1.3 * i, timeTL[i] * 0.03);
+        //console.log(textNew.length,timeTL,i);
+      }
+    }
+
+    function deleteDisplay() { //消した跡を表示
+      // rect(10, 10, 10, 10);
+      //fill(255);
+      //fill(0);
+      fill(0, 30);
+      for (var i = 0; i < xpD.length; i++) {
+        rect(xpD[i] * mojiSize * 1.3, timeB[i] * 0.03 - mojiSize * 1.3 + 5, mojiSize * 1.3, timeC[i] * 0.03 - timeB[i] * 0.03 + mojiSize * 1.3 - 5);
+      }
+      // console.log(xpD.length);
+    }
+
+    function deletetextDisplay() { //消された文字を表示
+      fill(255);
+      for (var i = 0; i < textD.length; i++) {
+        text(textD[i], xpD[i] * mojiSize * 1.3, timeB[i] * 0.03);
+        // 　console.log(textD[i],xpD[i],timeB[i]);
+      }
+    }
+
+    function slidetextDisplay() { //文字がスライドした痕跡
+
+      fill(0, 10);
+      // fill(255, 100);
+      // textFont("Shippori Mincho B1");
+      for (var i = 0; i < textS.length; i++) {
+        // console.log(textS, textS.length)
+        text(textS[i], xpS[i] * mojiSize * 1.3, timeS[i] * 0.03);
+      }
+      // console.log(textNew,timeS);
+      // console.log(cp,textNew.length);
+      // console.log(timeS,textS,xpS);
+    }
+
+
+    function keyReleased() {
+      if (keyCode == 8) { //BACKSPACEが押されたとき
+        if (cp > 0) {
+          matome(true);
+        }
+      }
+    }
+
+    function savePng(){
+
+      saveCanvas('整理番号_テーマ', 'png');
+
+    }
+
+    function downloadJson() {
+        // テキストエリア内の文字列を取得する
+        //kiroku
+        kiroku = [];
+        record = {textArray: textArray,textSave: textSave, textOld: textOld, textNew: textNew, textS: textS, textD: textD, texttest: texttest, timeA: timeA, timeB: timeB, timeC: timeC, timeS: timeS, timeTL: timeTL, timeNow: timeNow, xpD: xpD, xpS: xpS, xp: xp};
+        kiroku.push(record);
+        stringarray = JSON.stringify(kiroku);
+        console.log(stringarray)
+
+
+
+        const text = document.getElementById('textArea').value;
+
+        // 取得した文字列をBlob形式に変換
+        let blobedText = new Blob([stringarray], {type: 'text/plain' });
+
+
+        // BlobをURLに変換
+        let url = URL.createObjectURL(blobedText);
+
+        // ダウンロード可能なa要素を作成する
+        let link = document.createElement('a');
+        link.href = url;
+        link.download = '整理番号_テーマ.json';
+        // 要素の追加
+        document.body.appendChild(link);
+
+        // linkをclickすることでダウンロードが完了
+        link.click();
+
+        // 「link」は不要な要素になるので、link要素を削除
+        link.parentNode.removeChild(link)
+    }
+
+    function download() {
+
+
+
+
+        const text = document.getElementById('textArea').value;
+
+        // 取得した文字列をBlob形式に変換
+        let blobedText = new Blob([text], {type: 'text/plain' });
+
+
+        // BlobをURLに変換
+        let url = URL.createObjectURL(blobedText);
+
+        // ダウンロード可能なa要素を作成する
+        let link = document.createElement('a');
+        link.href = url;
+        link.download = '整理番号_テーマ.txt';
+        // 要素の追加
+        document.body.appendChild(link);
+
+        // linkをclickすることでダウンロードが完了
+        link.click();
+
+        // 「link」は不要な要素になるので、link要素を削除
+        link.parentNode.removeChild(link)
+    }
+
+    document.getElementById("save").onclick = function(){savePng(),download(), downloadJson()};
+    // document.getElementById("save").onclick = function(){download()};
+
+
+  </script>
+</body>
